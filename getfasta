@@ -1,0 +1,87 @@
+###converting the .bed files outputed from LiftOver into appropreate format for bestools getfasta
+
+singularity shell --bind /cephfs2/hannas:/mnt luca_r_env.sif
+cd /mnt
+cd genomic_var
+
+#run fro human 
+data <- read.table("human_locations.txt")
+data <- gsub(",", "", unlist(data))
+data <- gsub("chr", "", data)
+
+chromosome <- character(100)
+start <- numeric(100)
+end <- numeric(100)
+
+for (i in 1:100) {
+    parts <- unlist(strsplit(data[i], "[:-]"))
+
+    if (length(parts) >= 3) {
+        chromosome[i] <- parts[1]
+        start[i] <- as.numeric(gsub(",", "", parts[2]))
+        end[i] <- as.numeric(gsub(",", "", parts[3]))
+    }
+}
+
+result_df <- data.frame(
+    chromosome = chromosome,
+    start = start,
+    end = end
+)
+write.table(result_df, file = "h_locations.bed", sep = "\t", quote = FALSE, col.names = FALSE, row.names = FALSE)
+
+#run fro chimp 
+data <- read.table("chimp_locations.txt")
+data <- gsub(",", "", unlist(data))
+data <- gsub("chr", "", data)
+chromosome <- character(100)
+start <- numeric(100)
+end <- numeric(100)
+
+for (i in 1:100) {
+    parts <- unlist(strsplit(data[i], "[:-]"))
+
+    if (length(parts) >= 3) {
+        chromosome[i] <- parts[1]
+        start[i] <- as.numeric(gsub(",", "", parts[2]))
+        end[i] <- as.numeric(gsub(",", "", parts[3]))
+    }
+}
+
+result_df <- data.frame(
+    chromosome = chromosome,
+    start = start,
+    end = end
+)
+write.table(result_df, file = "ch_locations.bed", sep = "\t", quote = FALSE, col.names = FALSE, row.names = FALSE)
+
+###converting the FASTA files outputed from LiftOver into appropreate format for bestools getfasta
+
+
+####runnig bedtools getfasta
+bedtools getfasta -fi /cephfs2/hannas/demixing/data/genome/Homo_sapiens.GRCh38.dna.primary_assembly.fa -bed /cephfs2/hannas/genomic_var/h_locations.bed -fo /cephfs2/hannas/genomic_var/results/h_locations_out.fa
+bedtools getfasta -fi /cephfs2/hannas/demixing/data/genome/Pan_troglodytes.Pan_tro_3.0.dna.toplevel.fa -bed /cephfs2/hannas/genomic_var/ch_locations.bed -fo /cephfs2/hannas/genomic_var/results/ch_locations_out.fa
+###results availbale at /cephfs2/hannas/genomic_var/results
+
+singularity shell --bind /cephfs2/hannas:/mnt luca_r_env.sif
+cd /mnt/genomic_var/results
+
+data <- read.table("h_locations_out.fa")
+new_df <- data.frame(
+  data[seq(1, nrow(data), by = 2),],
+  data[seq(2, nrow(data), by = 2),]
+)
+write.csv(new_df, file = "h_locations_2col.csv")
+
+data <- read.table("ch_locations_out.fa")
+new_df <- data.frame(
+  data[seq(1, nrow(data), by = 2),],
+  data[seq(2, nrow(data), by = 2),]
+)
+write.csv(new_df, file = "ch_locations_2col.csv")
+
+
+alignment=$(stretcher -asequence <> -bsequence <> -outfile <.stretcher> -sformat_asequence "fa" -sformat_bsequence "fa" -error -warning)
+
+
+
