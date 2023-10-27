@@ -80,8 +80,38 @@ new_df <- data.frame(
 )
 write.csv(new_df, file = "ch_locations_2col.csv")
 
+#files with the sequences can be acessed at: cd /cephfs2/hannas/genomic_var/results
 
+
+#############runign the alignment#################
 alignment=$(stretcher -asequence <> -bsequence <> -outfile <.stretcher> -sformat_asequence "fa" -sformat_bsequence "fa" -error -warning)
 
+#trail run for the first sequences only: 
+file1="h_locations_out.fa"
+file2="ch_locations_out.fa"
+grep -v ">" h_locations_out.fa >> h_locations_seq_only.fa
+grep -v ">" ch_locations_out.fa >> ch_locations_seq_only.fa
+i=1
+awk -v line_num="$i" 'NR==line_num' h_locations_seq_only.fa >> one_line_h$i.fa
+awk -v line_num="$i" 'NR==line_num' ch_locations_seq_only.fa >> one_line_ch$i.fa
+
+ stretcher -asequence one_line_h$i.fa -bsequence one_line_ch$i.fa -outfile out_$i.stretcher 
+
+#gettign the coresponding seqeunces
+grep -v ">" h_locations_out.fa >> h_locations_seq_only.fa
+grep -v ">" ch_locations_out.fa >> ch_locations_seq_only.fa
+
+for i in {1..100} 
+do
+  awk -v line_num="$i" 'NR==line_num' h_locations_seq_only.fa >> one_line_h$i.fa
+  awk -v line_num="$i" 'NR==line_num' ch_locations_seq_only.fa >> one_line_ch$i.fa
+ 
+  stretcher -asequence one_line_h$i.fa -bsequence one_line_ch$i.fa -outfile out_$i.stretcher 
+  
+  identity_score=$(grep "# Identity:" "out_$i.stretcher")
+  echo "$i: $identity_score" >> identity_scores.txt
+done
+
+./aligner.sh 
 
 
