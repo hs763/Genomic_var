@@ -1,9 +1,12 @@
+#xeon 
 ###converting the .bed files outputed from LiftOver into appropreate format for bestools getfasta
 
-singularity shell --bind /cephfs2/hannas:/mnt luca_r_env.sif
-cd /mnt
-cd genomic_var
+cd 
+singularity shell --bind /data2/hanna:/mnt luca_r_env.sif
+cd /mnt/genomic_var
 
+cd TF genes
+#open R
 #run fro human 
 data <- read.table("human_locations.txt")
 data <- gsub(",", "", unlist(data))
@@ -115,3 +118,84 @@ done
 ./aligner.sh 
 
 
+
+
+####################for HK genes###############################
+cd HK_genes
+#open R
+#run fro human 
+data <- read.table("human_locations_HK.txt")
+data <- gsub(",", "", unlist(data))
+data <- gsub("chr", "", data)
+
+chromosome <- character(100)
+start <- numeric(100)
+end <- numeric(100)
+
+for (i in 1:100) {
+    parts <- unlist(strsplit(data[i], "[:-]"))
+
+    if (length(parts) >= 3) {
+        chromosome[i] <- parts[1]
+        start[i] <- as.numeric(gsub(",", "", parts[2]))
+        end[i] <- as.numeric(gsub(",", "", parts[3]))
+    }
+}
+
+result_df <- data.frame(
+    chromosome = chromosome,
+    start = start,
+    end = end
+)
+write.table(result_df, file = "h_locations2_HK.bed", sep = "\t", quote = FALSE, col.names = FALSE, row.names = FALSE)
+
+#run fro chimp 
+data <- read.table("chimp_locations_HK.txt")
+data <- gsub(",", "", unlist(data))
+data <- gsub("chr", "", data)
+chromosome <- character(100)
+start <- numeric(100)
+end <- numeric(100)
+
+for (i in 1:100) {
+    parts <- unlist(strsplit(data[i], "[:-]"))
+
+    if (length(parts) >= 3) {
+        chromosome[i] <- parts[1]
+        start[i] <- as.numeric(gsub(",", "", parts[2]))
+        end[i] <- as.numeric(gsub(",", "", parts[3]))
+    }
+}
+
+result_df <- data.frame(
+    chromosome = chromosome,
+    start = start,
+    end = end
+)
+write.table(result_df, file = "ch_locations2_HK.bed", sep = "\t", quote = FALSE, col.names = FALSE, row.names = FALSE)
+
+###converting the FASTA files outputed from LiftOver into appropreate format for bestools getfasta
+
+
+####runnig bedtools getfasta
+nohup bedtools getfasta -fi /data2/hanna/genomic_var/Homo_sapiens.GRCh38.dna.primary_assembly.fa -bed /data2/hanna/genomic_var/HK_genes/h_locations_HK.bed -fo /data2/hanna/genomic_var/HK_genes/h_locations_HK_out.fa &
+nohup bedtools getfasta -fi /data2/hanna/genomic_var/Pan_troglodytes.Pan_tro_3.0.dna.toplevel.fa -bed /data2/hanna/genomic_var/HK_genes/ch_locations_HK.bed -fo /data2/hanna/genomic_var/HK_genes/ch_locations_HK_out.fa &
+
+#run in terminal before runign aligner2.sh 
+grep -v ">" h_locations_HK_out.fa >> h_locations_HK_seq_only.fa
+grep -v ">" ch_locations_HK_out.fa >> ch_locations_HK_seq_only.fa
+
+£making aligner2.sh 
+nano aligner2.sh
+for i in {1..100} 
+do
+  awk -v line_num="$i" 'NR==line_num' h_locations_HK_seq_only.fa >> one_line_h$i.fa
+  awk -v line_num="$i" 'NR==line_num' ch_locations_HK_seq_only.fa >> one_line_ch$i.fa
+ 
+  stretcher -asequence one_line_h$i.fa -bsequence one_line_ch$i.fa -outfile out_$i.stretcher 
+  
+  identity_score=$(grep "# Identity:" "out_$i.stretcher")
+  echo "$i: $identity_score" >> identity_scores_HK.txt
+done
+
+./aligner2.sh  
