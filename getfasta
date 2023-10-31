@@ -117,7 +117,8 @@ done
 
 ./aligner.sh 
 
-
+#grab only the percentegas 
+sed -n 's/.*(\(.*\)).*/\1/p' identity_scores_HK.txt >> identity_percentages_HK.txt
 
 
 ####################for HK genes###############################
